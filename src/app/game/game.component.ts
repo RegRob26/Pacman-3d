@@ -85,14 +85,29 @@ export class GameComponent {
     animate()
 
     window.addEventListener('keydown',  (event : any) => {
-      this.onKeyDown(event, pacman, controls)
+      this.onKeyDown(event, pacman, controls, laberinto)
     })
+
   }
 
-  detectarColisionPared(pacmanPosition : any, laberinto: any){
+   detectarColisiones(pacman : any, laberinto : any) {
+    // Crear un rayo que apunte en la dirección del movimiento de Pacman
+    var rayo = new THREE.Raycaster(pacman.position, pacman.getWorldDirection());
+
+    // Detectar colisiones entre el rayo y los muros
+    var colisiones = rayo.intersectObjects(laberinto.children);
+
+    // Si se detecta una colisión, entonces Pacman está chocando contra un muro
+    if (colisiones.length > 0) {
+      return true;
+    } else {
+      return false;
+    }
   }
 
-  onKeyDown(event:any, pacman : any,  controls : any) {
+
+  onKeyDown(event:any, pacman : any,  controls : any, laberinto : any) {
+    //console.log(this.detectarColisiones(pacman, laberinto))
     let speed = 0.2
     let Y_position = controls.camera.position.y
     console.log(controls.camera.position)
