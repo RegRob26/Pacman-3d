@@ -6,7 +6,8 @@ import {PointerLockControls} from "three/examples/jsm/controls/PointerLockContro
 
 import {FirstPersonControls} from "three/examples/jsm/controls/FirstPersonControls"
 import {group} from "@angular/animations";
-import {cameraPosition} from "three/examples/jsm/nodes/shadernode/ShaderNodeBaseElements";
+import {cameraPosition, label, log} from "three/examples/jsm/nodes/shadernode/ShaderNodeBaseElements";
+import {OBB} from "three/examples/jsm/math/OBB";
 @Component({
   selector: 'app-game',
   templateUrl: './game.component.html',
@@ -80,6 +81,7 @@ export class GameComponent {
     {
       requestAnimationFrame(animate)
       //console.log(camera.position)
+
       renderer.render(scene, camera)
     }
     animate()
@@ -88,66 +90,71 @@ export class GameComponent {
       this.onKeyDown(event, pacman, controls, laberinto)
     })
 
+
   }
 
-   detectarColisiones(pacman : any, laberinto : any) {
-    // Crear un rayo que apunte en la dirección del movimiento de Pacman
-    var rayo = new THREE.Raycaster(pacman.position, pacman.getWorldDirection());
+   detectarColisiones(pacman  : any, laberinto : any) {
 
-    // Detectar colisiones entre el rayo y los muros
-    var colisiones = rayo.intersectObjects(laberinto.children);
+// Crear una caja delimitadora para pacman
+     let pacmanBB = new THREE.Box3().setFromObject(pacman);
 
-    // Si se detecta una colisión, entonces Pacman está chocando contra un muro
-    if (colisiones.length > 0) {
-      return true;
-    } else {
-      return false;
-    }
-  }
+     // Iterar sobre todos los objetos del laberinto
+     for (let i = 0; i < laberinto.length; i++) {
+       let object = laberinto[i];
+
+       // Crear una caja delimitadora para el objeto actual
+       let objectBB = new THREE.Box3().setFromObject(object);
+
+       // Comprobar si hay una colisión entre las cajas delimitadoras
+       let collision = pacmanBB.intersectsBox(objectBB);
+
+       // Si hay una colisión, imprimir un mensaje en la consola
+       if (collision) {
+         console.log("Colisión detectada con objeto ", i);
+         return collision
+       }
+
+     }
+      return false
+   }
 
 
   onKeyDown(event:any, pacman : any,  controls : any, laberinto : any) {
     //console.log(this.detectarColisiones(pacman, laberinto))
+    let colision = this.detectarColisiones(pacman, laberinto)
     let speed = 0.2
     let Y_position = controls.camera.position.y
-    console.log(controls.camera.position)
 
-    switch (event.keyCode) {
-      case 87: // Tecla "w"
-        controls.moveForward(speed);
-        break;
-      case 83: // Tecla "s"
-        controls.moveForward(-speed);
-        break;
-      case 65: // Tecla "a"
-        controls.getObject().rotation.y += Math.PI / 2; // Girar hacia la izquierda
-        break;
-      case 68: // Tecla "d"
-        controls.getObject().rotation.y -= Math.PI / 2; // Girar hacia la derecha
-        break;
+    if (!colision){
+      switch (event.keyCode) {
+        case 87: // Tecla "w"
+          controls.moveForward(speed);
+          break;
+        case 83: // Tecla "s"
+          controls.moveForward(-speed);
+          break;
+        case 65: // Tecla "a"
+          controls.getObject().rotation.y += Math.PI / 2; // Girar hacia la izquierda
+          break;
+        case 68: // Tecla "d"
+          controls.getObject().rotation.y -= Math.PI / 2; // Girar hacia la derecha
+          break;
+      }
     }
-    console.log(controls.camera.position)
     pacman.position.copy(controls.getObject().position);
     pacman.rotation.copy(controls.getObject().rotation);
-    console.log(pacman.position)
   }
 
   dibujarPacman(scene : any, camera : any){
+    const cubeGeometry = new THREE.BoxGeometry(.5, .5, .5);
+    const material = new THREE.MeshStandardMaterial({color: 0xff0000, roughness : 0.3, metalness : 1});
+    let pacman = new THREE.Mesh(cubeGeometry, material);
+    pacman.position.set(0, 25, 0);
 
-// Crear la geometría del Pacman
-    const pacmanGeometry = new THREE.SphereGeometry(0.5, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.8);
 
-// Crear el material del Pacman
-    const pacmanMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00, side: THREE.DoubleSide });
 
-// Crear la malla del Pacman
-    const pacman = new THREE.Mesh(pacmanGeometry, pacmanMaterial);
-// Añadir la malla del Pacman a la escena
     scene.add(pacman);
 
-// Ajustar la posición y rotación del Pacman
-    pacman.position.set(.5, 0.5, 1.5);
-    //pacman.rotation.x = -1;
     return pacman
   }
 
@@ -165,6 +172,8 @@ export class GameComponent {
       side: THREE.BackSide // Esto asegura que el fondo siempre se muestre detrás de los demás objetos
     });
     const mesh = new THREE.Mesh(geometry, material);
+
+
 
     scene.add(mesh)
   }
@@ -195,7 +204,7 @@ export class GameComponent {
 
 
   dibujarLaberinto(matrix : any, scene : any){
-    let laberinto = new THREE.Group()
+    let labyrinth = []
     // Recorrer la matriz y dibujar las paredes
     for (var i = 0; i < matrix.length; i++) {
       for (var j = 0; j < matrix[i].length; j++) {
@@ -203,15 +212,19 @@ export class GameComponent {
           var geometry = new THREE.BoxGeometry(1, 1, 1);
           var material = new THREE.MeshStandardMaterial({color: 0x0000ff, roughness : 0.3, metalness : 1});
           var wall = new THREE.Mesh(geometry, material);
+          wall.scale.set(1, 1, 1); // ajustar la escala de la pared
+
           wall.position.x = j - matrix.length/2;
           wall.position.z = -i + matrix.length/2;
           wall.position.y = 0.5
-          laberinto.add(wall)
+
+          labyrinth.push(wall)
+          scene.add(wall)
         }
       }
     }
-    scene.add(laberinto)
-    return laberinto
+
+    return labyrinth
   }
 
 }
