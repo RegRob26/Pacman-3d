@@ -30,7 +30,16 @@ export class GameComponent {
       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
     ]
 
+    type MazeElement = {
+      valor: number;
+      objeto: any; // Replace 'any' with the appropriate type for the objects in the maze
+    };
 
+    let mazeObject: MazeElement[][] = []; // Define the type for 'maze' as an array of 'MazeElement'
+
+
+    let pacman: any
+    let puntos: number = 0;
     //const canvas = <HTMLCanvasElement>document.getElementById('miCanvas');
     const scene = new THREE.Scene();
 
@@ -62,7 +71,6 @@ export class GameComponent {
     agregarPared(scene)
 
     let laberinto = dibujarLaberinto(maze, scene)
-    let pacman = dibujarPacman(scene, camera, maze)
     let orbitControls = new OrbitControls(camera, renderer.domElement)
     orbitControls.enableDamping = true
     orbitControls.minDistance = 5
@@ -73,16 +81,50 @@ export class GameComponent {
     let key: any
 
 
-    function detectarColisiones(pacman: any, laberinto: any) {
+    function detectarColisionBarrera(pacman: any, laberinto: any) {
       // Obtener la posición actual del pacman
       const posX = pacman.x;
       const posZ = pacman.z;
       console.log("posX: ", posX, "posZ: ", posZ, maze[posZ][posX])
+
       return maze[posZ][posX] === 1
     }
 
+    function actualizarContador() {
+      let contador = document.getElementById("contador")
+      if (contador !== null) {
+        contador.innerHTML = "Puntos: " + puntos
+        // Aplica un tamaño de fuente mayor al elemento
+        contador.style.fontSize = "30px";
+      }
 
+    }
+
+    function detectarColisionPunto(pacman: any) {
+      // Obtener la posición actual del pacman
+
+      const pacmanPosicion = new THREE.Vector3(
+        Math.round(pacman.position.x),
+        pacman.position.y,
+        Math.round(pacman.position.z)
+      );
+      let arreglo = mazeObject[pacmanPosicion.z][pacmanPosicion.x].objeto
+
+      if (maze[pacmanPosicion.z][pacmanPosicion.x] === 0) {
+        maze[pacmanPosicion.z][pacmanPosicion.x] = -1
+        scene.remove(arreglo)
+        mazeObject[pacmanPosicion.z][pacmanPosicion.x].objeto = -1
+        mazeObject[pacmanPosicion.z][pacmanPosicion.x].valor = -1
+        puntos++
+        console.log("punto ganado", maze)
+      }
+    }
+
+    /**
+     * @deprecated
+     */
     function vistazo(key: any, pacman_origi: any, speed_ori: any, laberinto: any) {
+
       let speed = speed_ori + 0.025
       let pacman = pacman_origi.clone()
 
@@ -109,7 +151,7 @@ export class GameComponent {
           break;
       }
 
-      if (detectarColisiones(pacman, laberinto)) {
+      if (detectarColisionBarrera(pacman, laberinto)) {
         console.log('El movimiento no es seguro')
         return true
       } else {
@@ -124,24 +166,24 @@ export class GameComponent {
       // se desorientan los controles y gira para lados poco naturales
       let speed = 0.05;
       let posicionNueva;
-      //let colision = detectarColisiones(pacman, laberinto);
+      let pacmanRadio = 0.5
       // Si no hay colisión, procesar la tecla presionada
       switch (event) {
 
         case 87: // Tecla "w"
-          posicionNueva = new THREE.Vector3(Math.round(pacman.position.x + speed + 0.5),
+          posicionNueva = new THREE.Vector3(Math.round(pacman.position.x + speed + pacmanRadio),
             pacman.position.y,
             Math.round(pacman.position.z))
-          if (detectarColisiones(posicionNueva, laberinto)) return;
+          if (detectarColisionBarrera(posicionNueva, laberinto)) return;
           pacman.position.x += speed;
           pacman.userData['direccionActual'] = 87
           break
 
         case 83: // Tecla "s"
-          posicionNueva = new THREE.Vector3(Math.round(pacman.position.x - speed - 0.5),
+          posicionNueva = new THREE.Vector3(Math.round(pacman.position.x - speed - pacmanRadio),
             pacman.position.y,
             Math.round(pacman.position.z))
-          if (detectarColisiones(posicionNueva, laberinto)) return;
+          if (detectarColisionBarrera(posicionNueva, laberinto)) return;
 
           pacman.position.x -= speed;
           pacman.userData['direccionActual'] = 83
@@ -151,8 +193,8 @@ export class GameComponent {
 
           posicionNueva = new THREE.Vector3(Math.round(pacman.position.x),
             pacman.position.y,
-            Math.round(pacman.position.z + speed - 0.5))
-          if (detectarColisiones(posicionNueva, laberinto)) return;
+            Math.round(pacman.position.z + speed - pacmanRadio))
+          if (detectarColisionBarrera(posicionNueva, laberinto)) return;
 
           pacman.userData['direccionActual'] = 65
           pacman.position.z -= speed;
@@ -162,42 +204,21 @@ export class GameComponent {
 
           posicionNueva = new THREE.Vector3(Math.round(pacman.position.x),
             pacman.position.y,
-            Math.round(pacman.position.z + speed + 0.5))
-          if (detectarColisiones(posicionNueva, laberinto)) return;
+            Math.round(pacman.position.z + speed + pacmanRadio))
+          if (detectarColisionBarrera(posicionNueva, laberinto)) return;
 
           pacman.userData['direccionActual'] = 68
           pacman.position.z += speed;
           break;
-      }
-    }
 
-    function dibujarPacman(scene: any, camera: any, matrix: any) {
-      const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
-      const material = new THREE.MeshStandardMaterial({color: 0xff0000, roughness: 0.3, metalness: 1});
-      let pacman = new THREE.Mesh(cubeGeometry, material);
-
-      for (var i = 0; i < matrix.length; i++) {
-        for (var j = 0; j < matrix[i].length; j++) {
-          if (matrix[i][j] == 2) {
-            pacman.position.x = j;
-            pacman.position.z = i;
-            pacman.position.y = 0.5
-            console.log("Pacman: ", i, j, pacman.position.x, pacman.position.z)
-            //pacman.position.set(j - matrix.length / 2, 0.5, -i + matrix.length);
-          }
-        }
       }
 
-      pacman.userData['direccionActual'] = new THREE.Vector3(0, 0, 1)
-//    pacman.geometry.computeBoundingBox();
-      scene.add(pacman);
-      return pacman
     }
 
     function agregarPared(scene: any) {
       // Cargar la textura de imagen del fondo
       const textureLoader = new THREE.TextureLoader();
-      const texture = textureLoader.load('../../assets/stars.jpg');
+      const texture = textureLoader.load('../../assets/137910.jpg');
 // Crear la geometría de la caja del fondo
       const geometry = new THREE.BoxGeometry(40, 40, 40);
 
@@ -235,68 +256,113 @@ export class GameComponent {
       scene.add(gridHelper);
     }
 
+    function actualizarPuntos(scene: any) {
+      for (let i = 0; i < maze.length; i++) {
+        for (let j = 0; j < maze[i].length; j++) {
+          if (maze[i][j] === 0) {
+            dibujarPuntos(scene, j, 0.5, i)
+          }
+        }
+      }
+    }
+
+    function dibujarPuntos(scene: any, x: any, y: any, z: any) {
+      const esferaGeometria = new THREE.SphereGeometry(0.1, 64, 64)
+      const material = new THREE.MeshStandardMaterial({color: 0xffffff, roughness: 0.3, metalness: 1});
+      let punto = new THREE.Mesh(esferaGeometria, material);
+
+      punto.position.x = x
+      punto.position.z = z
+      punto.position.y = y
+
+      scene.add(punto);
+      return punto
+    }
+
+
+    function dibujarPacman(scene: any, x: any, y: any, z: any) {
+      const cubeGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+      const material = new THREE.MeshStandardMaterial({color: 0xff0000, roughness: 0.3, metalness: 1});
+      let pacman = new THREE.Mesh(cubeGeometry, material);
+
+      pacman.position.x = x
+      pacman.position.z = z
+      pacman.position.y = y
+
+      pacman.userData['direccionActual'] = 87
+
+      scene.add(pacman);
+      return pacman
+    }
 
     function dibujarLaberinto(matrix: any, scene: any) {
       let labyrinth = []
       // Recorrer la matriz y dibujar las paredes
-      for (var i = 0; i < matrix.length; i++) {
-        for (var j = 0; j < matrix[i].length; j++) {
+      for (let i = 0; i < matrix.length; i++) {
+        mazeObject[i] = []
+        for (let j = 0; j < matrix[i].length; j++) {
           if (matrix[i][j] === 1) {
-            var geometry = new THREE.BoxGeometry(1, 1, 1);
+            const geometry = new THREE.BoxGeometry(1, 1, 1);
             geometry.computeBoundingBox();
 
-            var material = new THREE.MeshStandardMaterial({color: 0x0000ff, roughness: 0.3, metalness: 1});
-            var wall = new THREE.Mesh(geometry, material);
+            const material = new THREE.MeshStandardMaterial({color: 0x0000ff, roughness: 0.3, metalness: 1});
+            const wall = new THREE.Mesh(geometry, material);
 
             wall.position.x = j;
             wall.position.z = i;
             wall.position.y = 0.5
 
+            mazeObject[i][j] = {
+              valor: matrix[i][j],
+              objeto: wall
+            };
             labyrinth.push(wall)
             scene.add(wall)
+          }
+          if (matrix[i][j] === 2) {
+            pacman = dibujarPacman(scene, j, 0.5, i)
+            mazeObject[i][j] = {
+              valor: matrix[i][j],
+              objeto: pacman
+            };
+          }
+          if (matrix[i][j] === 0) {
+            const punto = dibujarPuntos(scene, j, 0.5, i)
+            mazeObject[i][j] = {
+              valor: matrix[i][j],
+              objeto: punto
+            };
+
           }
         }
       }
       return labyrinth
     }
 
+
     function actualizarDireccionCamara(pacman: any, camera: any) {
       let distancia = 5
-      let velocidad_cambio = 0.02
       let direccion = pacman.userData['direccionActual']
       switch (direccion) {
         case 87: // tecla 'w'
-          camera.lookAt(pacman.position)
-          if (camera.position.x > pacman.position.x - distancia)
-            camera.position.x -= velocidad_cambio
-
+          camera.position.x = pacman.position.x - distancia
           camera.position.y = pacman.position.y + distancia
           camera.position.z = pacman.position.z;
           break
         case 83:
-          camera.lookAt(pacman.position)
-          if (camera.position.x < pacman.position.x + distancia)
-            camera.position.x += velocidad_cambio
-          
-          //camera.position.x = pacman.position.x + distancia
+          camera.position.x = pacman.position.x + distancia
           camera.position.y = pacman.position.y + distancia
           camera.position.z = pacman.position.z;
           break
         case 65: // Tecla "a"
-          camera.lookAt(pacman.position)
-          if (camera.position.z < pacman.position.z + distancia)
-            camera.position.z += velocidad_cambio
-
           camera.position.x = pacman.position.x
           camera.position.y = pacman.position.y + distancia
+          camera.position.z = pacman.position.z + distancia
           break;
         case 68: // Tecla "d"
-          camera.lookAt(pacman.position)
-          if (camera.position.z > pacman.position.z - distancia)
-            camera.position.z -= velocidad_cambio
-
           camera.position.x = pacman.position.x;
           camera.position.y = pacman.position.y + distancia
+          camera.position.z = pacman.position.z - distancia
           break;
 
       }
@@ -309,8 +375,10 @@ export class GameComponent {
 
       actualizarDireccionCamara(pacman, camera)
       // Hace que la cámara mire al objeto a seguir
-      //camera.lookAt(pacman.position)
-      onKeyDown(key, pacman, laberinto);
+      camera.lookAt(pacman.position)
+      onKeyDown(key, pacman, laberinto)
+      detectarColisionPunto(pacman)
+      actualizarContador()
       renderer.render(scene, camera)
     }
 
