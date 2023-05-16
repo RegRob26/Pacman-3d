@@ -72,38 +72,6 @@ export class GameComponent {
     orbitControls.update()
     let key: any
 
-    // give a simple function that chech collitions in three3d with threejs
-
-
-    /*    function detectarColisiones(pacman: any, laberinto: any) {
-          // Obtener la posición y el radio de pacman
-          let pacmanPos = pacman.position;
-          let pacmanRad = pacman.geometry.parameters.width / 2;
-
-          // Iterar sobre todos los objetos del laberinto
-          for (let i = 0; i < laberinto.length; i++) {
-            let object = laberinto[i];
-
-            // Obtener la posición y el radio del objeto actual
-            let objectPos = object.position;
-            let objectRad = object.geometry.parameters.width / 2;
-
-            // Calcular la distancia entre los centros de los objetos
-            let distance = pacmanPos.distanceTo(objectPos);
-    //        console.log("Distance: ", distance, pacmanRad, objectRad)
-            // Si la distancia es menor que la suma de los radios, hay una colisión
-
-            // give me a function that round a number
-
-
-            let i_m = Math.round(pacman.position.z)
-            let j_m = Math.round(pacman.position.x)
-            if (distance < pacmanRad + objectRad && maze[i_m][j_m] == 1) {
-              return true
-            }
-          }
-          return false;
-        }*/
 
     function detectarColisiones(pacman: any, laberinto: any) {
       // Obtener la posición actual del pacman
@@ -294,27 +262,41 @@ export class GameComponent {
 
     function actualizarDireccionCamara(pacman: any, camera: any) {
       let distancia = 5
+      let velocidad_cambio = 0.02
       let direccion = pacman.userData['direccionActual']
       switch (direccion) {
-        case 87:
-          camera.position.x = pacman.position.x - distancia;
-          camera.position.y = pacman.position.y + distancia;
+        case 87: // tecla 'w'
+          camera.lookAt(pacman.position)
+          if (camera.position.x > pacman.position.x - distancia)
+            camera.position.x -= velocidad_cambio
+
+          camera.position.y = pacman.position.y + distancia
           camera.position.z = pacman.position.z;
           break
         case 83:
-          camera.position.x = pacman.position.x + distancia;
-          camera.position.y = pacman.position.y + distancia;
+          camera.lookAt(pacman.position)
+          if (camera.position.x < pacman.position.x + distancia)
+            camera.position.x += velocidad_cambio
+          
+          //camera.position.x = pacman.position.x + distancia
+          camera.position.y = pacman.position.y + distancia
           camera.position.z = pacman.position.z;
           break
         case 65: // Tecla "a"
-          camera.position.x = pacman.position.x;
-          camera.position.y = pacman.position.y + distancia;
-          camera.position.z = pacman.position.z + distancia;
+          camera.lookAt(pacman.position)
+          if (camera.position.z < pacman.position.z + distancia)
+            camera.position.z += velocidad_cambio
+
+          camera.position.x = pacman.position.x
+          camera.position.y = pacman.position.y + distancia
           break;
         case 68: // Tecla "d"
+          camera.lookAt(pacman.position)
+          if (camera.position.z > pacman.position.z - distancia)
+            camera.position.z -= velocidad_cambio
+
           camera.position.x = pacman.position.x;
-          camera.position.y = pacman.position.y + distancia;
-          camera.position.z = pacman.position.z - distancia;
+          camera.position.y = pacman.position.y + distancia
           break;
 
       }
@@ -327,7 +309,7 @@ export class GameComponent {
 
       actualizarDireccionCamara(pacman, camera)
       // Hace que la cámara mire al objeto a seguir
-      camera.lookAt(pacman.position)
+      //camera.lookAt(pacman.position)
       onKeyDown(key, pacman, laberinto);
       renderer.render(scene, camera)
     }
